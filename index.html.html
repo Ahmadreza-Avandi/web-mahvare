@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>داشبورد کنترل کیوب‌ست پژوهشی</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+        }
+
+        .neon-border {
+            border: 1px solid rgba(0, 195, 255, 0.3);
+            box-shadow: 0 0 10px rgba(0, 195, 255, 0.3), inset 0 0 10px rgba(0, 195, 255, 0.3);
+        }
+
+        .neon-text {
+            text-shadow: 0 0 5px rgba(0, 195, 255, 0.8);
+        }
+
+        .neon-hover:hover {
+            box-shadow: 0 0 15px rgba(0, 195, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .status-online {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 0, 0); }
+        }
+
+        .satellite-icon {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(5deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .star {
+            position: absolute;
+            background-color: #fff;
+            border-radius: 50%;
+            animation: twinkle var(--duration) ease-in-out infinite;
+        }
+
+        @keyframes twinkle {
+            0% { opacity: 0.2; }
+            50% { opacity: 1; }
+            100% { opacity: 0.2; }
+        }
+
+        .compass-needle {
+            transform-origin: 50% 100%;
+            transition: transform 0.5s ease-out;
+        }
+
+        .battery-level {
+            transition: width 0.5s ease-out;
+        }
+
+        .toast {
+            animation: slideIn 0.5s forwards, fadeOut 0.5s 2.5s forwards;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="relative">
+    <!-- Stars background -->
+    <div class="stars" id="stars"></div>
+
+    <!-- Top Navigation Bar -->
+    <header class="glass-card fixed top-0 left-0 right-0 z-50 p-4 flex justify-between items-center">
+        <div class="flex items-center space-x-4 space-x-reverse">
+            <button id="sidebarToggle" class="md:hidden text-xl text-cyan-300">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="flex items-center space-x-2 space-x-reverse">
+                <i class="fas fa-satellite text-cyan-300 satellite-icon"></i>
+                <h1 class="text-xl font-bold neon-text">ماهواره کیوب‌ست پژوهشی</h1>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-6 space-x-reverse">
+            <div class="flex items-center space-x-2 space-x-reverse">
+                <div class="w-3 h-3 rounded-full bg-green-500 status-online"></div>
+                <span>آنلاین</span>
+            </div>
+            <div id="currentDateTime" class="hidden md:block"></div>
+            <div class="flex items-center space-x-2 space-x-reverse">
+                <i class="fas fa-user-astronaut text-cyan-300"></i>
+                <span>اپراتور فضایی</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="glass-card fixed top-0 right-0 h-full w-64 z-40 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out pt-20">
+        <nav class="p-4">
+            <ul class="space-y-4">
+                <li>
+                    <a href="#" class="flex items-center space-x-3 space-x-reverse p-3 rounded-lg bg-cyan-900 bg-opacity-30 text-cyan-300 neon-hover">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>داشبورد اصلی</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#battery" class="flex items-center space-x-3 space-x-reverse p-3 rounded-lg hover:bg-cyan-900 hover:bg-opacity-30 hover:text-cyan-300 neon-hover">
+                        <i class="fas fa-battery-three-quarters"></i>
+                        <span>وضعیت باتری</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#sensors" class="flex items-center space-x-3 space-x-reverse p-3 rounded-lg hover:bg-cyan-900 hover:bg-opacity-30 hover:text-cyan-300 neon-hover">
+                        <i class="fas fa-microchip"></i>
+                        <span>داده‌های سنسور</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#camera" class="flex items-center space-x-3 space-x-reverse p-3 rounded-lg hover:bg-cyan-900 hover:bg-opacity-30 hover:text-cyan-300 neon-hover">
+                        <i class="fas fa-camera"></i>
+                        <span>نمای زنده دوربین</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#gps" class="flex items-center space-x-3 space-x-reverse p-3 rounded-lg hover:bg-cyan-900 hover:bg-opacity-30 hover:text-cyan-300 neon-hover">
+                        <i class="fas fa-map-marked-alt"></i>
+                        <span>موقعیت مکانی</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#compass" class="flex items-center space-x-3 space-x-reverse p-3 rounded-lg hover:bg-cyan-900 hover:bg-opacity-30 hover:text-cyan-300 neon-hover">
+                        <i class="fas fa-compass"></i>
+                        <span>جهت‌یابی</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#settings" class="flex items-center space-x-3 space-x-reverse p-3 rounded-lg hover:bg-cyan-900 hover:bg-opacity-30 hover:text-cyan-300 neon-hover">
+                        <i class="fas fa-cog"></i>
+                        <span>تنظیمات</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="flex items-center space-x-3 space-x-reverse p-3 rounded-lg hover:bg-cyan-900 hover:bg-opacity-30 hover:text-cyan-300 neon-hover">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>خروج</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="pt-24 pr-0 md:pr-64 min-h-screen">
+        <div class="container mx-auto px-4 pb-12">
+            <!-- Toast Notifications -->
+            <div id="toastContainer" class="fixed bottom-4 left-4 z-50 space-y-2"></div>
+
+            <!-- Dashboard Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Angle Sensor Card -->
+                <div id="angleSensor" class="glass-card neon-border rounded-xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold flex items-center space-x-2 space-x-reverse">
+                            <i class="fas fa-satellite-dish text-cyan-300"></i>
+                            <span>سنسور زاویه ماهواره</span>
+                        </h2>
+                        <span class="text-xs bg-cyan-900 bg-opacity-50 px-2 py-1 rounded">زنده</span>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4 mb-4">
+                        <div class="text-center">
+                            <div class="text-3xl font-bold" id="pitchValue">0°</div>
+                            <div class="text-sm text-gray-300">زاویه Pitch</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold" id="rollValue">0°</div>
+                            <div class="text-sm text-gray-300">زاویه Roll</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold" id="yawValue">0°</div>
+                            <div class="text-sm text-gray-300">زاویه Yaw</div>
+                        </div>
+                    </div>
+
+                    <div class="h-40">
+                        <canvas id="angleChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Gas Sensor Card -->
+                <div id="gasSensor" class="glass-card neon-border rounded-xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold flex items-center space-x-2 space-x-reverse">
+                            <i class="fas fa-wind text-purple-300"></i>
+                            <span>سنسور گاز</span>
+                        </h2>
+                        <span class="text-xs bg-cyan-900 bg-opacity-50 px-2 py-1 rounded">زنده</span>
+                    </div>
+
+                    <div class="flex items-end justify-between mb-4">
+                        <div>
+                            <div class="text-4xl font-bold" id="gasValue">0</div>
+                            <div class="text-sm text-gray-300">ppm</div>
+                        </div>
+                        <div id="gasStatus" class="text-sm px-3 py-1 rounded-full bg-green-500 bg-opacity-20">
+                            نرمال
+                        </div>
+                    </div>
+
+                    <div class="h-40">
+                        <canvas id="gasChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Humidity Sensor Card -->
+                <div id="humiditySensor" class="glass-card neon-border rounded-xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold flex items-center space-x-2 space-x-reverse">
+                            <i class="fas fa-tint text-blue-300"></i>
+                            <span>سنسور رطوبت</span>
+                        </h2>
+                        <span class="text-xs bg-cyan-900 bg-opacity-50 px-2 py-1 rounded">زنده</span>
+                    </div>
+
+                    <div class="flex items-center justify-center mb-6">
+                        <div class="relative w-32 h-32">
+                            <canvas id="humidityGauge" class="absolute inset-0"></canvas>
+                            <div class="absolute inset-0 flex items-center justify-center flex-col">
+                                <div class="text-3xl font-bold" id="humidityValue">0%</div>
+                                <div class="text-sm text-gray-300">رطوبت نسبی</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Temperature Sensor Card -->
+                <div id="temperatureSensor" class="glass-card neon-border rounded-xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold flex items-center space-x-2 space-x-reverse">
+                            <i class="fas fa-temperature-high text-red-300"></i>
+                            <span>دمای محیط</span>
+                        </h2>
+                        <span class="text-xs bg-cyan-900 bg-opacity-50 px-2 py-1 rounded">زنده</span>
+                    </div>
+
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="text-4xl font-bold" id="tempCValue">0°C</div>
+                        <div class="text-2xl" id="tempFValue">0°F</div>
+                    </div>
+
+                    <div class="h-40">
+                        <canvas id="tempChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Battery Status Card -->
+                <div id="battery" class="glass-card neon-border rounded-xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold flex items-center space-x-2 space-x-reverse">
+                            <i class="fas fa-battery-three-quarters text-yellow-300"></i>
+                            <span>وضعیت باتری</span>
+                        </h2>
+                        <span class="text-xs bg-cyan-900 bg-opacity-50 px-2 py-1 rounded">زنده</span>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="text-4xl font-bold text-center" id="batteryValue">0%</div>
+                    </div>
+
+                    <div class="h-4 bg-gray-800 rounded-full mb-2 overflow-hidden">
+                        <div id="batteryLevel" class="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 rounded-full" style="width: 0%"></div>
+                    </div>
+
+                    <div class="flex justify-between text-xs text-gray-300">
+                        <span>کم</span>
+                        <span>متوسط</span>
+                        <span>پر</span>
+                    </div>
+
+                    <div class="mt-6 flex justify-between text-sm">
+                        <div>
+                            <div class="text-gray-300">ولتاژ</div>
+                            <div class="font-bold" id="batteryVoltage">0.0V</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-300">جریان</div>
+                            <div class="font-bold" id="batteryCurrent">0.0A</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-300">زمان باقی‌مانده</div>
+                            <div class="font-bold" id="batteryTime">0h 0m</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GPS Position Card -->
+                <div id="gps" class="glass-card neon-border rounded-xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold flex items-center space-x-2 space-x-reverse">
+                            <i class="fas fa-map-marked-alt text-green-300"></i>
+                            <span>موقعیت جغرافیایی</span>
+                        </h2>
+                        <span class="text-xs bg-cyan-900 bg-opacity-50 px-2 py-1 rounded">زنده</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <div class="text-sm text-gray-300">عرض جغرافیایی</div>
+                            <div class="text-xl font-bold" id="gpsLat">0.0000°N</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-gray-300">طول جغرافیایی</div>
+                            <div class="text-xl font-bold" id="gpsLng">0.0000°E</div>
+                        </div>
+                    </div>
+
+                    <div class="h-64 bg-gray-900 rounded-lg flex items-center justify-center relative">
+                        <div id="mapPlaceholder" class="text-center p-4">
+                            <i class="fas fa-globe-americas text-4xl text-gray-600 mb-2"></i>
+                            <p class="text-gray-400">نقشه موقعیت ماهواره</p>
+                            <p class="text-xs text-gray-500 mt-2">(برای نمایش واقعی نیاز به API نقشه دارد)</p>
+                        </div>
+                        <div class="absolute bottom-2 left-2 bg-black bg-opacity-50 px-2 py-1 rounded text-xs">
+                            <i class="fas fa-satellite text-cyan-300 mr-1"></i>
+                            <span>ماهواره کیوب‌ست</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">ارتفاع:</span>
+                            <span class="font-bold" id="gpsAlt">0 متر</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">سرعت:</span>
+                            <span class="font-bold" id="gpsSpeed">0 km/h</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Camera Feed Card -->
+                <div id="camera" class="glass-card neon-border rounded-xl p-6 md:col-span-2">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold flex items-center space-x-2 space-x-reverse">
+                            <i class="fas fa-camera text-pink-300"></i>
+                            <span>نمای زنده دوربین</span>
+                        </h2>
+                        <span class="text-xs bg-cyan-900 bg-opacity-50 px-2 py-1 rounded">زنده</span>
+                    </div>
+
+                    <div class="bg-gray-900 rounded-lg overflow-hidden relative" style="padding-bottom: 56.25%;">
+                        <div id="cameraFeed" class="absolute inset-0 flex items-center justify-center">
+                            <div class="text-center p-4">
+                                <i class="fas fa-video-slash text-4xl text-gray-600 mb-2"></i>
+                                <p class="text-gray-400">نمای دوربین ماهواره</p>
+                                <p class="text-xs text-gray-500 mt-2">(برای نمایش واقعی نیاز به WebRTC دارد)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex space-x-3 space-x-reverse">
+                        <button class="bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg flex items-center neon-hover">
+                            <i class="fas fa-camera mr-2"></i>
+                            <span>گرفتن عکس</span>
+                        </button>
+                        <button class="bg-purple-700 hover:bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center neon-hover">
+                            <i class="fas fa-exchange-alt mr-2"></i>
+                            <span>تغییر دوربین</span>
+                        </button>
+                        <button class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center neon-hover">
+                            <i class="fas fa-cog mr-2"></i>
+                            <span>تنظیمات</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Compass Card -->
+                <div id="compass" class="glass-card neon-border rounded-xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold flex items-center space-x-2 space-x-reverse">
+                            <i class="fas fa-compass text-orange-300"></i>
+                            <span>جهت‌یابی لحظه‌ای</span>
+                        </h2>
+                        <span class="text-xs bg-cyan-900 bg-opacity-50 px-2 py-1 rounded">زنده</span>
+                    </div>
+
+                    <div class="flex justify-center mb-6">
+                        <div class="relative w-48 h-48">
+                            <div class="absolute inset-0 rounded-full border-4 border-gray-700 flex items-center justify-center">
+                                <div class="w-40 h-40 rounded-full bg-gray-800 relative">
+                                    <!-- Compass directions -->
+                                    <div class="absolute top-0 left-1/2 transform -translate-x-1/2 text-red-500 font-bold">N</div>
+                                    <div class="absolute right-0 top-1/2 transform -translate-y-1/2 text-gray-300">E</div>
+                                    <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-gray-300">S</div>
+                                    <div class="absolute left-0 top-1/2 transform -translate-y-1/2 text-gray-300">W</div>
+
+                                    <!-- Compass needle -->
+                                    <div class="absolute top-1/2 left-1/2 w-1/2 transform origin-left">
+                                        <div class="h-1 bg-red-500 rounded-full relative compass-needle" style="transform: rotate(0deg);">
+                                            <div class="absolute -right-1 -top-1 w-3 h-3 bg-red-500 rounded-full"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Center point -->
+                                    <div class="absolute top-1/2 left-1/2 w-3 h-3 bg-red-500 rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center">
+                        <div class="text-3xl font-bold" id="compassHeading">0°</div>
+                        <div class="text-sm text-gray-300">جهت فعلی</div>
+                    </div>
+                </div>
+
+                <!-- Settings Card -->
+                <div id="settings" class="glass-card neon-border rounded-xl p-6 md:col-span-2 lg:col-span-3">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold flex items-center space-x-2 space-x-reverse">
+                            <i class="fas fa-cog text-cyan-300"></i>
+                            <span>تنظیمات سیستم</span>
+                        </h2>
+                        <button class="bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg neon-hover">
+                            ذخیره تنظیمات
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div>
+                            <h3 class="text-lg font-semibold mb-3 flex items-center space-x-2 space-x-reverse">
+                                <i class="fas fa-palette text-purple-300"></i>
+                                <span>ظاهر و تم</span>
+                            </h3>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span>تم تاریک</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" value="" class="sr-only peer" checked>
+                                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span>رنگ اصلی</span>
+                                    <select class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg block w-32 p-2">
+                                        <option selected>آبی فضایی</option>
+                                        <option>بنفش</option>
+                                        <option>سبز</option>
+                                        <option>قرمز</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span>جلوه‌های نئون</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" value="" class="sr-only peer" checked>
+                                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-semibold mb-3 flex items-center space-x-2 space-x-reverse">
+                                <i class="fas fa-bell text-yellow-300"></i>
+                                <span>اعلان‌ها</span>
+                            </h3>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span>هشدار باتری کم</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" value="" class="sr-only peer" checked>
+                                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span>هشدار گاز بالا</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" value="" class="sr-only peer" checked>
+                                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span>صداهای هشدار</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" value="" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-semibold mb-3 flex items-center space-x-2 space-x-reverse">
+                                <i class="fas fa-database text-green-300"></i>
+                                <span>داده و گزارش</span>
+                            </h3>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span>ذخیره خودکار داده‌ها</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" value="" class="sr-only peer" checked>
+                                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span>فرمت گزارش</span>
+                                    <select class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg block w-32 p-2">
+                                        <option selected>JSON</option>
+                                        <option>CSV</option>
+                                        <option>Excel</option>
+                                    </select>
+                                </div>
+                                <button class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg neon-hover mt-4">
+                                    <i class="fas fa-download mr-2"></i>
+                                    دانلود گزارش کامل
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Create stars background
+        function createStars() {
+            const starsContainer = document.getElementById('stars');
+            const starsCount = 200;
+
+            for (let i = 0; i < starsCount; i++) {
+                const star = document.createElement('div');
+                star.classList.add('star');
+
+                // Random position
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+
+                // Random size (0.5px to 2px)
+                const size = Math.random() * 1.5 + 0.5;
+
+                // Random opacity (0.3 to 1)
+                const opacity = Math.random() * 0.7 + 0.3;
+
+                // Random animation duration (3s to 8s)
+                const duration = Math.random() * 5 + 3;
+
+                star.style.left = `${x}%`;
+                star.style.top = `${y}%`;
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.opacity = opacity;
+                star.style.setProperty('--duration', `${duration}s`);
+
+                starsContainer.appendChild(star);
+            }
+        }
+
+        // Initialize charts
+        function initCharts() {
+            // Angle Chart
+            const angleCtx = document.getElementById('angleChart').getContext('2d');
+            const angleChart = new Chart(angleCtx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 10}, (_, i) => i + 1),
+                    datasets: [
+                        {
+                            label: 'Pitch',
+                            data: Array(10).fill(0),
+                            borderColor: 'rgba(0, 195, 255, 1)',
+                            backgroundColor: 'rgba(0, 195, 255, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Roll',
+                            data: Array(10).fill(0),
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Yaw',
+                            data: Array(10).fill(0),
+                            borderColor: 'rgba(153, 102, 255, 1)',
+                            backgroundColor: 'rgba(153, 102, 255, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            rtl: true,
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 360,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '°';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Gas Chart
+            const gasCtx = document.getElementById('gasChart').getContext('2d');
+            const gasChart = new Chart(gasCtx, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 10}, (_, i) => i + 1),
+                    datasets: [{
+                        label: 'غلظت گاز (ppm)',
+                        data: Array(10).fill(0),
+                        backgroundColor: 'rgba(255, 159, 64, 0.7)',
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+
+            // Humidity Gauge
+            const humidityCtx = document.getElementById('humidityGauge').getContext('2d');
+            const humidityGauge = new Chart(humidityCtx, {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [0, 100],
+                        backgroundColor: ['rgba(54, 162, 235, 0.7)', 'rgba(255, 255, 255, 0.1)'],
+                        borderWidth: 0,
+                        circumference: 270,
+                        rotation: 225
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '80%',
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: false
+                        }
+                    }
+                }
+            });
+
+            // Temperature Chart
+            const tempCtx = document.getElementById('tempChart').getContext('2d');
+            const tempChart = new Chart(tempCtx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => i),
+                    datasets: [{
+                        label: 'دمای محیط (°C)',
+                        data: Array(24).fill(0),
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            rtl: true,
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+
+            return {
+                angleChart,
+                gasChart,
+                humidityGauge,
+                tempChart
+            };
+        }
+
+        // Generate random data
+        function generateRandomData() {
+            return {
+                pitch: Math.floor(Math.random() * 360),
+                roll: Math.floor(Math.random() * 360),
+                yaw: Math.floor(Math.random() * 360),
+                gas: Math.floor(Math.random() * 100),
+                humidity: Math.floor(Math.random() * 100),
+                tempC: (Math.random() * 50 - 10).toFixed(1),
+                tempF: ((Math.random() * 50 - 10) * 9/5 + 32).toFixed(1),
+                battery: Math.floor(Math.random() * 100),
+                batteryVoltage: (Math.random() * 3 + 3).toFixed(1),
+                batteryCurrent: (Math.random() * 2).toFixed(1),
+                batteryTime: `${Math.floor(Math.random() * 5)}h ${Math.floor(Math.random() * 60)}m`,
+                lat: (35.6892 + (Math.random() - 0.5) * 0.1).toFixed(4),
+                lng: (51.3890 + (Math.random() - 0.5) * 0.1).toFixed(4),
+                alt: Math.floor(Math.random() * 1000),
+                speed: (Math.random() * 100).toFixed(1),
+                heading: Math.floor(Math.random() * 360)
+            };
+        }
+
+        // Update dashboard with new data
+        function updateDashboard(charts, data) {
+            // Update angle values
+            document.getElementById('pitchValue').textContent = `${data.pitch}°`;
+            document.getElementById('rollValue').textContent = `${data.roll}°`;
+            document.getElementById('yawValue').textContent = `${data.yaw}°`;
+
+            // Update angle chart
+            charts.angleChart.data.datasets[0].data.shift();
+            charts.angleChart.data.datasets[0].data.push(data.pitch);
+            charts.angleChart.data.datasets[1].data.shift();
+            charts.angleChart.data.datasets[1].data.push(data.roll);
+            charts.angleChart.data.datasets[2].data.shift();
+            charts.angleChart.data.datasets[2].data.push(data.yaw);
+            charts.angleChart.update();
+
+            // Update gas values
+            document.getElementById('gasValue').textContent = data.gas;
+
+            // Update gas status
+            const gasStatus = document.getElementById('gasStatus');
+            if (data.gas > 80) {
+                gasStatus.textContent = 'خطرناک';
+                gasStatus.className = 'text-sm px-3 py-1 rounded-full bg-red-500 bg-opacity-20';
+                showToast('هشدار: غلظت گاز در سطح خطرناک!', 'danger');
+            } else if (data.gas > 50) {
+                gasStatus.textContent = 'هشدار';
+                gasStatus.className = 'text-sm px-3 py-1 rounded-full bg-yellow-500 bg-opacity-20';
+            } else {
+                gasStatus.textContent = 'نرمال';
+                gasStatus.className = 'text-sm px-3 py-1 rounded-full bg-green-500 bg-opacity-20';
+            }
+
+            // Update gas chart
+            charts.gasChart.data.datasets[0].data.shift();
+            charts.gasChart.data.datasets[0].data.push(data.gas);
+            charts.gasChart.update();
+
+            // Update humidity
+            document.getElementById('humidityValue').textContent = `${data.humidity}%`;
+            charts.humidityGauge.data.datasets[0].data = [data.humidity, 100 - data.humidity];
+            charts.humidityGauge.update();
+
+            // Update temperature
+            document.getElementById('tempCValue').textContent = `${data.tempC}°C`;
+            document.getElementById('tempFValue').textContent = `${data.tempF}°F`;
+
+            // Update temperature chart
+            charts.tempChart.data.datasets[0].data.shift();
+            charts.tempChart.data.datasets[0].data.push(data.tempC);
+            charts.tempChart.update();
+
+            // Update battery
+            document.getElementById('batteryValue').textContent = `${data.battery}%`;
+            document.getElementById('batteryLevel').style.width = `${data.battery}%`;
+            document.getElementById('batteryVoltage').textContent = `${data.batteryVoltage}V`;
+            document.getElementById('batteryCurrent').textContent = `${data.batteryCurrent}A`;
+            document.getElementById('batteryTime').textContent = data.batteryTime;
+
+            if (data.battery < 20) {
+                showToast('هشدار: سطح باتری پایین است!', 'warning');
+            }
+
+            // Update GPS
+            document.getElementById('gpsLat').textContent = `${data.lat}°N`;
+            document.getElementById('gpsLng').textContent = `${data.lng}°E`;
+            document.getElementById('gpsAlt').textContent = `${data.alt} متر`;
+            document.getElementById('gpsSpeed').textContent = `${data.speed} km/h`;
+
+            // Update compass
+            document.getElementById('compassHeading').textContent = `${data.heading}°`;
+            document.querySelector('.compass-needle').style.transform = `rotate(${data.heading}deg)`;
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast glass-card neon-border p-4 rounded-lg flex items-start space-x-3 space-x-reverse max-w-xs ${type === 'danger' ? 'border-red-500' : type === 'warning' ? 'border-yellow-500' : 'border-cyan-500'}`;
+
+            let icon;
+            if (type === 'danger') {
+                icon = '<i class="fas fa-exclamation-circle text-red-400 text-xl"></i>';
+            } else if (type === 'warning') {
+                icon = '<i class="fas fa-exclamation-triangle text-yellow-400 text-xl"></i>';
+            } else {
+                icon = '<i class="fas fa-info-circle text-cyan-400 text-xl"></i>';
+            }
+
+            toast.innerHTML = `
+                ${icon}
+                <div class="text-sm">${message}</div>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            // Remove toast after animation
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Update current date and time
+        function updateDateTime() {
+            const now = new Date();
+            const options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            };
+
+            // Convert to Persian locale
+            const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+            let dateTimeStr = now.toLocaleDateString('fa-IR', options);
+
+            // Replace digits with Persian digits
+            for (let i = 0; i < 10; i++) {
+                dateTimeStr = dateTimeStr.replace(new RegExp(i, 'g'), persianDigits[i]);
+            }
+
+            document.getElementById('currentDateTime').textContent = dateTimeStr;
+        }
+
+        // Toggle sidebar on mobile
+        function setupSidebarToggle() {
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('-translate-x-full');
+                sidebar.classList.toggle('translate-x-0');
+            });
+        }
+
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            createStars();
+            const charts = initCharts();
+            setupSidebarToggle();
+
+            // Update date time immediately and then every second
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+
+            // Update data immediately and then every 3-5 seconds
+            let data = generateRandomData();
+            updateDashboard(charts, data);
+
+            setInterval(() => {
+                data = generateRandomData();
+                updateDashboard(charts, data);
+            }, 3000 + Math.random() * 2000);
+
+            // Simulate battery warning after 10 seconds
+            setTimeout(() => {
+                showToast('توجه: سطح باتری به ۱۵٪ رسید', 'warning');
+            }, 10000);
+
+            // Simulate gas warning after 15 seconds
+            setTimeout(() => {
+                showToast('هشدار: غلظت گاز به ۸۵ ppm رسید', 'danger');
+            }, 15000);
+        });
+    </script>
+</body>
+</html>
